@@ -1,6 +1,7 @@
 const mineflayer = require('mineflayer');
 const pvp = require('mineflayer-pvp').plugin;
 const { pathfinder, Movements, goals } = require('mineflayer-pathfinder');
+const express = require('express');  // Agregado para servidor web
 
 // Crear el bot
 const bot = mineflayer.createBot({
@@ -71,4 +72,18 @@ bot.on('end', () => {
       version: '1.21.4'                // Versión de Minecraft
     });
   }, 5000);  // Reconectar después de 5 segundos
+});
+
+// Agregar un servidor Express para mantener el bot activo en Render
+const app = express();
+
+// Ruta para comprobar que el bot sigue en línea
+app.get('/', (req, res) => {
+  res.send('El bot está en línea');
+});
+
+// Render necesita que escuche en un puerto específico
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor web corriendo en el puerto ${PORT}`);
 });
