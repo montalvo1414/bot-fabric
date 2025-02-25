@@ -1,4 +1,5 @@
 const mineflayer = require('mineflayer');
+const pvp = require('mineflayer-pvp').plugin;
 const { pathfinder, Movements, goals } = require('mineflayer-pathfinder');
 
 // Crear el bot
@@ -10,6 +11,7 @@ const bot = mineflayer.createBot({
 });
 
 // Cargar los plugins
+bot.loadPlugin(pvp);
 bot.loadPlugin(pathfinder);
 
 // Al conectarse
@@ -19,29 +21,38 @@ bot.on('spawn', () => {
   // Establecer los movimientos del bot
   const mcData = require('minecraft-data')(bot.version);
   bot.pathfinder.setMovements(new Movements(bot, mcData));
-
-  // Configurar el objetivo para ir a las coordenadas (0, 60, 0)
-  const targetPos = new mineflayer.vec3(0, 60, 0);  // Ajusta las coordenadas para llegar al bloque
-
-  // Establecer el objetivo para que el bot llegue a esas coordenadas
-  bot.pathfinder.setGoal(new goals.GoalBlock(0, 60, 0));  // Coordenadas específicas
 });
 
-// Minar el bloque específico en las coordenadas (0, 60, 0)
-bot.on('goal_reached', () => {
-  const block = bot.blockAt(new mineflayer.vec3(0, 60, 0));  // Coordenadas del bloque
-  if (block) {
-    console.log('Bloque encontrado, comenzando a picar...');
-    bot.dig(block).then(() => {
-      bot.chat('Bloque minado en (0, 60, 0)');
-      // Después de minar, se puede volver a establecer el objetivo para repetir el proceso
-      bot.pathfinder.setGoal(new goals.GoalBlock(0, 60, 0));  // Volver a la misma posición para seguir minando
-    }).catch(err => {
-      bot.chat('Error al minar el bloque');
-      console.log(err);
-    });
-  } else {
-    bot.chat('No se encontró el bloque en las coordenadas especificadas.');
+// Seguir a un jugador
+bot.on('chat', (username, message) => {
+  if (message === 'follow') {
+    const player = bot.players[username];
+    if (player) {
+      bot.pathfinder.setGoal(new goals.GoalFollow(player.entity, 1));  // Seguir al jugador con una distancia mínima de 1 bloque
+      bot.chat(`Siguiendo a ${username}`);
+    } else {
+      bot.chat(`No se encuentra al jugador ${username}`);
+    }
+  }
+
+  if (message === 'stop') {
+    bot.pathfinder.setGoal(null);  // Detener el seguimiento
+    bot.chat('Dejé de seguir.');
+  }
+});
+
+// Atacar mobs cercanos
+bot.on('physicTick', () => {
+  if (bot.pvp.target) return;  // Si está atacando, no hacer nada
+  if (bot.pathfinder.isMoving()) return;  // No atacar si está en movimiento
+
+  // Buscar mobs cercanos
+  const filter = e => e.type === 'mob' && e.position.distanceTo(bot.entity.position) < 16;
+  const entity = bot.nearestEntity(filter);
+
+  if (entity) {
+    bot.pvp.attack(entity);  // Atacar el mob
+    console.log(`Atacando al mob ${entity.mobType}`);
   }
 });
 
