@@ -21,23 +21,26 @@ bot.on('spawn', () => {
   // Establecer los movimientos del bot
   const mcData = require('minecraft-data')(bot.version);
   bot.pathfinder.setMovements(new Movements(bot, mcData));
+
+  // Configurar el objetivo para ir a las coordenadas (0, 60, 0)
+  const targetPos = bot.entity.position.offset(0, 60, 0);  // Ajusta las coordenadas para llegar al bloque
+
+  // Establecer el objetivo para que el bot llegue a esas coordenadas y mine el bloque
+  bot.pathfinder.setGoal(new goals.GoalBlock(0, 60, 0));  // Coordenadas específicas
 });
 
-// Seguir a un jugador
-bot.on('chat', (username, message) => {
-  if (message === 'follow') {
-    const player = bot.players[username];
-    if (player) {
-      bot.pathfinder.setGoal(new goals.GoalFollow(player.entity, 1));  // Seguir al jugador con una distancia mínima de 1 bloque
-      bot.chat(`Siguiendo a ${username}`);
-    } else {
-      bot.chat(`No se encuentra al jugador ${username}`);
-    }
-  }
-
-  if (message === 'stop') {
-    bot.pathfinder.setGoal(null);  // Detener el seguimiento
-    bot.chat('Dejé de seguir.');
+// Minar el bloque específico en las coordenadas (0, 60, 0)
+bot.on('goal_reached', () => {
+  const block = bot.blockAt(new mineflayer.vec3(0, 60, 0));  // Coordenadas del bloque
+  if (block) {
+    bot.dig(block).then(() => {
+      bot.chat('Bloque minado en (0, 60, 0)');
+    }).catch(err => {
+      bot.chat('Error al minar el bloque');
+      console.log(err);
+    });
+  } else {
+    bot.chat('No se encontró el bloque en las coordenadas especificadas.');
   }
 });
 
